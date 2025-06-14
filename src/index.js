@@ -1,49 +1,41 @@
 // backend/index.js
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const cors = require('cors'); // Asegúrate de que esté importado
 const morgan = require('morgan');
 
 const app = express();
-const port = process.env.PORT || 3001; // Usa el puerto de .env o 3001 por defecto
+const port = process.env.PORT || 3001;
 
 // --- Configuración de CORS ---
-// Define la URL de tu frontend en desarrollo
 const FRONTEND_DEV_URL = 'http://localhost:3000';
-// Define la URL de tu frontend en producción (se leerá de las variables de entorno en .env o el hosting)
 const FRONTEND_PROD_URL = process.env.FRONTEND_PUBLIC_URL;
 
-// Crea una lista de orígenes permitidos
 const allowedOrigins = [FRONTEND_DEV_URL];
-if (FRONTEND_PROD_URL && FRONTEND_PROD_URL !== FRONTEND_DEV_URL) { // Asegura no duplicar si son iguales o si no está definida
+if (FRONTEND_PROD_URL && FRONTEND_PROD_URL !== FRONTEND_DEV_URL) {
   allowedOrigins.push(FRONTEND_PROD_URL);
 }
 
-app.use(express.json()); // Para parsear JSON en las solicitudes
-
-// Middleware de CORS aplicado una única vez al principio
+// **¡MOVER ESTO AL PRINCIPIO, ANTES DE express.json()!**
 app.use(cors({
   origin: function (origin, callback) {
-    // Permite solicitudes sin origen (como Postman/cURL) o del mismo origen del servidor
     if (!origin) return callback(null, true);
-
-    // Si el origen de la solicitud está en nuestra lista de permitidos
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      // Si el origen no está permitido, rechaza la solicitud
       console.warn(`CORS Error: Origin ${origin} not allowed by policy.`);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true // Importante para manejar cookies, tokens de autorización, etc.
+  credentials: true
 }));
 
-app.use(morgan('dev')); // Logger de peticiones HTTP (muestra logs en consola)
+app.use(express.json()); // **AHORA ESTO VA DESPUÉS DE CORS**
+app.use(morgan('dev'));
 
 // Rutas unificadas
 const routes = require('./routes');
-app.use('/api', routes); // Todas tus rutas ahora se acceden con el prefijo /api
+app.use('/api', routes);
 
 // Manejo de rutas no encontradas (404)
 app.use((req, res, next) => {
@@ -62,7 +54,7 @@ app.get('/', (req, res) => {
 });
 
 // Levantar servidor
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => { // Añade '0.0.0.0' aquí también, es una buena práctica para Railway
   console.log(`Servidor corriendo en http://localhost:${port}`);
   console.log(`CORS permitiendo los orígenes: ${allowedOrigins.join(', ')}`);
 });
