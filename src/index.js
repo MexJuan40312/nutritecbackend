@@ -33,11 +33,18 @@ console.log('✅ Allowed Origins:', allowedOrigins);
 app.use((req, res, next) => {
   const origin = req.headers.origin?.trim();
 
-  if (allowedOrigins.includes(origin)) {
+  // Si NO hay origin, responde wildcard (Postman, curl)
+  if (!origin) {
+    res.header('Access-Control-Allow-Origin', '*');
+  } 
+  // Si coincide, pon el mismo origin
+  else if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
-  } else {
-    // Si no es permitido, bloquea o devuelve fallback según tu política:
-    res.header('Access-Control-Allow-Origin', 'null');
+  } 
+  // Si NO coincide, NO pongas 'null': mejor bloquear explícito
+  else {
+    console.warn(`❌ CORS origin rechazado: ${origin}`);
+    return res.status(403).json({ error: `Origin ${origin} not allowed` });
   }
 
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
@@ -45,13 +52,12 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
-    console.log(`✅ Preflight respondido para: ${origin}`);
-    return res.status(200).end(); // Usa .end() para evitar conflicto
+    console.log(`✅ Preflight OK para ${origin}`);
+    return res.status(200).end();
   }
 
   next();
 });
-
 
 // ----------------------------------
 // ✅ CORS normal para las rutas reales
