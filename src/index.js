@@ -8,26 +8,29 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 // ----------------------------
-// ✅ CONFIGURACIÓN DE CORS ROBUSTA
+// ✅ CONFIGURACIÓN DE CORS PRO
 // ----------------------------
 
 // Define la URL de tu frontend local y de producción
 const FRONTEND_DEV_URL = 'http://localhost:3000';
-const FRONTEND_PROD_URL = process.env.FRONTEND_PUBLIC_URL;
+let FRONTEND_PROD_URL = process.env.FRONTEND_PUBLIC_URL;
 
-// Lista de orígenes permitidos
+// NORMALIZA: quita espacios y punto y coma al final
+if (FRONTEND_PROD_URL) {
+  FRONTEND_PROD_URL = FRONTEND_PROD_URL.trim().replace(/;$/, '');
+}
+
 const allowedOrigins = [FRONTEND_DEV_URL];
 if (FRONTEND_PROD_URL && FRONTEND_PROD_URL !== FRONTEND_DEV_URL) {
   allowedOrigins.push(FRONTEND_PROD_URL);
 }
 
-console.log("Allowed Origins:", allowedOrigins);
+console.log('✅ Allowed Origins:', allowedOrigins);
 
-// Middleware de CORS configurado a nivel global
-const corsOptions = {
+// Middleware de CORS aplicado una única vez, simple y eficaz
+app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // Permitir Postman y curl
-
+    if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
@@ -35,50 +38,38 @@ const corsOptions = {
       return callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-};
-
-app.use(cors(corsOptions));
-
-// ✅ MUY IMPORTANTE: responder correctamente preflight OPTIONS
-app.options('*', cors(corsOptions));
+  credentials: true
+}));
 
 // ----------------------------
 // ✅ Middlewares útiles
 // ----------------------------
-
 app.use(express.json());
 app.use(morgan('dev'));
 
 // ----------------------------
-// ✅ RUTAS
+// ✅ Rutas unificadas
 // ----------------------------
-
 const routes = require('./routes');
 app.use('/api', routes);
 
 // ----------------------------
-// ✅ RUTA DE PRUEBA
+// ✅ Ruta de prueba
 // ----------------------------
-
 app.get('/', (req, res) => {
-  res.status(200).json({ message: '¡El backend de Nutritec está funcionando correctamente!' });
+  res.status(200).json({ message: '¡Nutritec backend funcionando OK!' });
 });
 
 // ----------------------------
-// ✅ Manejo de 404
+// ✅ 404
 // ----------------------------
-
-app.use((req, res, next) => {
+app.use((req, res) => {
   res.status(404).json({ message: "Endpoint no encontrado" });
 });
 
 // ----------------------------
 // ✅ Manejador global de errores
 // ----------------------------
-
 app.use((err, req, res, next) => {
   console.error('🔥 Error:', err.stack);
   res.status(500).json({
@@ -90,8 +81,7 @@ app.use((err, req, res, next) => {
 // ----------------------------
 // ✅ Levantar servidor
 // ----------------------------
-
 app.listen(port, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
-  console.log(`✅ CORS habilitado para: ${allowedOrigins.join(', ')}`);
+  console.log(`✅ Orígenes permitidos: ${allowedOrigins.join(', ')}`);
 });
