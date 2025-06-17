@@ -8,14 +8,11 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 // ----------------------------
-// ✅ CONFIGURACIÓN DE CORS PRO
+// ✅ CONFIGURACIÓN DE CORS LIMPIA Y ROBUSTA
 // ----------------------------
 
-// Define la URL de tu frontend local y de producción
 const FRONTEND_DEV_URL = 'http://localhost:3000';
 let FRONTEND_PROD_URL = process.env.FRONTEND_PUBLIC_URL;
-
-// NORMALIZA: quita espacios y punto y coma al final
 if (FRONTEND_PROD_URL) {
   FRONTEND_PROD_URL = FRONTEND_PROD_URL.trim().replace(/;$/, '');
 }
@@ -27,22 +24,32 @@ if (FRONTEND_PROD_URL && FRONTEND_PROD_URL !== FRONTEND_DEV_URL) {
 
 console.log('✅ Allowed Origins:', allowedOrigins);
 
-// Middleware de CORS aplicado una única vez, simple y eficaz
+// ✅ CORS con preflight automático
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      console.warn(`⛔ CORS bloqueado para: ${origin}`);
-      return callback(new Error('Not allowed by CORS'));
-    }
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    console.warn(`⛔ CORS bloqueado para: ${origin}`);
+    return callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 200,  // Para proxies antiguos que requieren 200 en preflight
 }));
 
+// ✅ Opcional: handler manual para cualquier OPTIONS (garantía doble)
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // ----------------------------
-// ✅ Middlewares útiles
+// ✅ Otros Middlewares
 // ----------------------------
 app.use(express.json());
 app.use(morgan('dev'));
@@ -68,7 +75,7 @@ app.use((req, res) => {
 });
 
 // ----------------------------
-// ✅ Manejador global de errores
+// ✅ Error Handler global
 // ----------------------------
 app.use((err, req, res, next) => {
   console.error('🔥 Error:', err.stack);
@@ -79,7 +86,7 @@ app.use((err, req, res, next) => {
 });
 
 // ----------------------------
-// ✅ Levantar servidor
+// ✅ Start server
 // ----------------------------
 app.listen(port, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
