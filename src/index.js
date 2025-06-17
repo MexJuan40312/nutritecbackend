@@ -29,21 +29,29 @@ console.log('✅ Allowed Origins:', allowedOrigins);
 // ✅ Respuesta inmediata para *todas* las OPTIONS
 // ----------------------------------
 
+// ✅ Manejo manual de preflight robusto
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
+  const origin = req.headers.origin?.trim();
+
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    // Si no es permitido, bloquea o devuelve fallback según tu política:
+    res.header('Access-Control-Allow-Origin', 'null');
   }
+
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    console.log(`✅ Preflight respondido para: ${origin}`);
+    return res.status(200).end(); // Usa .end() para evitar conflicto
   }
 
   next();
 });
+
 
 // ----------------------------------
 // ✅ CORS normal para las rutas reales
